@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Free Online Quiz Maker | VidyarthiPrep.com</title>
+    <meta name="description" content="Convert Word (.docx) files to Online Quizzes instantly. Free tool for teachers.">
+    
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.10/mammoth.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h1 { color: #15803d; margin: 0 0 5px 0; text-align: center; font-size: 1.8rem; }
+        .subtitle { text-align: center; color: #64748B; margin-bottom: 20px; font-size: 0.9em; }
+        
+        .info-box { background: #eff6ff; border-left: 5px solid #2563EB; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9em; color: #1e40af; }
+        .info-box code { background: #dbeafe; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-weight: bold; }
+
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 15px; outline: none; }
+        
+        .upload-box { border: 2px dashed #bbf7d0; padding: 20px; border-radius: 15px; background: #f0fdf4; margin: 20px 0; cursor: pointer; text-align: center; transition: 0.2s; }
+        .upload-box:hover { border-color: #16a34a; background: #dcfce7; }
+        
+        .btn-main { background: #1e293b; color: white; padding: 15px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+        
+        .action-buttons { display: none; gap: 10px; margin-top: 20px; }
+        .btn-wa { background: #25D366; flex: 1; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-save { background: #2563EB; flex: 1; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        .status-msg { margin-top: 15px; font-size: 0.9em; color: #166534; background: #dcfce7; padding: 10px; border-radius: 6px; display: none; text-align: center; border: 1px solid #86efac; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>📝 Quiz Maker</h1>
+    <div class="subtitle">Powered by <b>VidyarthiPrep.com</b></div>
+    
+    <div class="info-box">
+        <p>Please make MS word file with following instructions.</p>
+        <p style="font-size:0.85em; color:#4b5563;">(कृपया Word फाइल नीचे दिए गए फॉर्मेट में बनाएं)</p>
+        <hr style="border:0; border-top:1px dashed #bfdbfe; margin:10px 0;">
+        • प्रश्न: <code>Q1. Question text...</code><br>
+        • विकल्प: <code>(A) Option 1</code> या <code>A) Option 1</code><br>
+        • उत्तर: अंत में <code>Ans: A</code> या <code>सही उत्तर: (A)</code>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="cls" placeholder="Class (e.g. 10th)">
+        <input type="text" id="sub" placeholder="Subject (e.g. Science)">
+    </div>
+    
+    <div class="input-group">
+        <input type="text" id="title" placeholder="Test Title (e.g. Unit Test 1)" style="flex:2">
+        <input type="number" id="time" placeholder="Time (Min)" style="flex:1" min="1" value="30">
+    </div>
+
+    <div class="upload-box" onclick="document.getElementById('file').click()">
+        <i class="fas fa-cloud-upload-alt" style="font-size: 35px; color: #16a34a; margin-bottom: 10px;"></i><br>
+        <span id="file-label" style="color:#15803d; font-weight:600;">Word File यहाँ चुनें (.docx)</span>
+        <input type="file" id="file" accept=".docx" style="display:none" onchange="handleFile(this)">
+    </div>
+
+    <label style="display:flex; align-items:center; justify-content:center; margin-bottom:15px; color:#475569; cursor:pointer;">
+        <input type="checkbox" id="neg" checked style="width:18px; height:18px; margin-right:8px;">
+        Negative Marking (-0.25)
+    </label>
+
+    <button id="process-btn" class="btn-main" onclick="processFile()">
+        <i class="fas fa-magic"></i> टेस्ट फाइल तैयार करें
+    </button>
+
+    <div id="status" class="status-msg">✅ फाइल तैयार है! नीचे से चुनें:</div>
+
+    <div id="actions" class="action-buttons">
+        <button class="btn-wa" onclick="shareFile()">
+            <i class="fab fa-whatsapp"></i> Share App
+        </button>
+        <button class="btn-save" onclick="saveFile()">
+            <i class="fas fa-download"></i> Save File
+        </button>
+    </div>
+</div>
+
+<script>
+    let generatedBlob = null;
+    let generatedFileName = "";
+
+    function handleFile(input) {
+        if(input.files[0]) document.getElementById('file-label').innerText = "📂 " + input.files[0].name;
+    }
+
+    async function processFile() {
+        const fileIn = document.getElementById('file');
+        const cls = document.getElementById('cls').value.trim() || "Class";
+        const sub = document.getElementById('sub').value.trim() || "Subject";
+        const title = document.getElementById('title').value.trim() || "Test";
+        const time = document.getElementById('time').value || 30;
+        const btn = document.getElementById('process-btn');
+
+        if(!fileIn.files.length) return alert("कृपया Word फाइल अपलोड करें!");
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        try {
+            const ab = await fileIn.files[0].arrayBuffer();
+            const res = await mammoth.convertToHtml({ arrayBuffer: ab });
+            const qs = parseEngine(res.value);
+            
+            if(!qs.length) throw new Error("प्रश्न नहीं मिले! फॉर्मेट चेक करें।");
+
+            const data = { 
+                meta: { cls, sub, title, time }, 
+                settings: { neg: document.getElementById('neg').checked }, 
+                questions: qs 
+            };
+
+            generatedFileName = `${cls}_${sub}_${title}`.replace(/[^a-z0-9]/gi, '_') + ".html";
+            const htmlContent = generateHTML(data);
+            generatedBlob = new Blob([htmlContent], { type: 'text/html' });
+
+            btn.style.display = 'none';
+            document.getElementById('status').style.display = 'block';
+            document.getElementById('actions').style.display = 'flex';
+
+        } catch (e) {
+            alert(e.message);
+            btn.innerHTML = '<i class="fas fa-magic"></i> दोबारा कोशिश करें';
+        }
+    }
+
+    function saveFile() {
+        if(!generatedBlob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(generatedBlob);
+        a.download = generatedFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    async function shareFile() {
+        if(!generatedBlob) return;
+        const fileObj = new File([generatedBlob], generatedFileName, { type: 'text/html' });
+
+        if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
+            try {
+                await navigator.share({
+                    files: [fileObj],
+                    title: generatedFileName,
+                    text: 'बच्चों, यह रहा आपका टेस्ट फाइल। इसे डाउनलोड करके ओपन करें:'
+                });
+            } catch (err) { console.log(err); }
+        } else {
+            alert("लैपटॉप पर फाइल डाउनलोड हो जाएगी। इसे WhatsApp Web पर ड्रैग करें।");
+            saveFile();
+            setTimeout(() => window.open('https://web.whatsapp.com/', '_blank'), 1000);
+        }
+    }
+
+    // --- PARSING ENGINE ---
+    function parseEngine(html) {
+        const div = document.createElement('div'); div.innerHTML = html.replace(/<br\s*\/?>/gi, '\n');
+        let qs = [], curr = null;
+        let blocks = [];
+        div.querySelectorAll('p, li, h1, h2, h3, img').forEach(el => {
+            if(el.tagName === 'IMG') blocks.push({t:'', i:el.src});
+            else { let t=el.innerText.trim(); let i=el.querySelector('img')?.src; if(t||i) blocks.push({t:t, i:i}); }
+        });
+
+        blocks.forEach(b => {
+            let txt = b.t;
+            const ansReg = /^(?:Ans:|Answer:|सही उत्तर:|Ans|Answer|सही)\s*[:\-]?\s*[\(]?([A-D])[\)]?/i;
+            if(ansReg.test(txt)) { if(curr) curr.ans = txt.match(ansReg)[1].toUpperCase(); return; }
+
+            const parts = txt.split(/(?=(?:\s*[\(]?[A-D][\)\.\-]\s+)|(?:\s*(?:Ans:|Answer:|सही उत्तर:|सही\s*उत्तर)))/i);
+            const qStart = /^(?:Q[\s\.]*)?\d+[\.\)\-]\s+/i;
+
+            if(qStart.test(parts[0])) {
+                if(curr) qs.push(curr);
+                curr = { id:qs.length+1, txt:parts[0].replace(qStart,'').trim(), opts:[], ans:null, img:b.i };
+                for(let i=1; i<parts.length; i++) procPart(parts[i], curr);
+            } else if(curr) {
+                if(!txt && b.i) curr.img = b.i;
+                else { parts.forEach(p => procPart(p, curr)); if(b.i && !curr.img) curr.img = b.i; }
+            }
+        });
+        if(curr) qs.push(curr);
+        return qs;
+    }
+
+    function procPart(s, q) {
+        s=s.trim(); if(!s)return;
+        const o = s.match(/^[\(]?([A-D])[\)\.\-]\s+(.*)/i);
+        const a = s.match(/^(?:Ans:|Answer:|सही उत्तर:|Ans|Answer|सही)\s*[:\-]?\s*[\(]?([A-D])[\)]?/i);
+        if(o) q.opts.push({lbl:o[1].toUpperCase(), txt:o[2]});
+        else if(a) q.ans = a[1].toUpperCase();
+    }
+
+    // --- STUDENT APP GENERATOR (With Fixed Mobile Share) ---
+    function generateHTML(data) {
+        const json = JSON.stringify(data);
+        return `<!DOCTYPE html><html lang="hi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${data.meta.sub} Quiz</title><script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script><script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>body{font-family:sans-serif;padding:15px;background:#f8fafc;max-width:600px;margin:0 auto}.c{background:white;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.05);margin-bottom:15px;text-align:center}button{width:100%;padding:15px;background:#2563EB;color:white;border:none;border-radius:10px;font-weight:bold;margin-top:10px;cursor:pointer}input{width:100%;padding:12px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}.opt{padding:12px;background:#f1f5f9;margin:8px 0;border-radius:8px;text-align:left;cursor:pointer;border:2px solid transparent}.sel{background:#eff6ff;border-color:#2563EB}.h{display:none}img{max-width:100%;border-radius:8px;margin:10px 0}.brand{margin-top:20px;font-size:0.85em;color:#64748B}.brand a{color:#2563EB;text-decoration:none;font-weight:bold}</style></head><body><div id="l" class="c"><h2>${data.meta.sub}</h2><p>${data.meta.title} (${data.meta.cls})</p><p style="color:#d97706">⏳ Time Limit: ${data.meta.time} Min</p><input id="n" placeholder="Student Name"><input id="r" placeholder="Roll No" type="number"><button onclick="s()">Start Test ▶</button><div class="brand">Powered by <a href="https://www.vidyarthiprep.com">VidyarthiPrep.com</a></div></div><div id="q" class="c h"><div style="display:flex;justify-content:space-between"><b><span id="pg"></span></b><span id="tm" style="background:#fee2e2;color:#dc2626;padding:5px 10px;border-radius:5px">00:00</span></div><div id="qb"></div><button onclick="nx()" id="nb">Next ➔</button></div><div id="re" class="c h"><h2>📊 Result Sheet</h2><div id="rh"></div><div style="width:200px;margin:0 auto"><canvas id="ch"></canvas></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button onclick="sh()" style="background:#25D366">Share Result</button><button onclick="pd()" style="background:#64748B">PDF</button></div><div id="dt" style="text-align:left;margin-top:20px"></div><div class="brand">Create your own quiz at <a href="https://www.vidyarthiprep.com">VidyarthiPrep.com</a></div></div><script>let d=${json},q=[],a={},t,sec=d.meta.time*60,i=0,nm,rl;function s(){nm=document.getElementById('n').value;rl=document.getElementById('r').value;if(!nm||!rl)return alert("Details required");q=[...d.questions].sort(()=>Math.random()-.5);document.getElementById('l').classList.add('h');document.getElementById('q').classList.remove('h');rn();t=setInterval(()=>{sec--;let m=Math.floor(sec/60).toString().padStart(2,'0'),s=(sec%60).toString().padStart(2,'0');document.getElementById('tm').innerText=m+':'+s;if(sec<=0){clearInterval(t);alert("Time Over!");fn()}},1000)}function rn(){let c=q[i];document.getElementById('pg').innerText='Q '+(i+1)+'/'+q.length;document.getElementById('nb').innerText=i==q.length-1?'Submit':'Next';let h='<h3>Q'+(i+1)+'. '+c.txt+'</h3>'+(c.img?'<img src="'+c.img+'">':'');h+=c.opts.map(o=>'<div class="opt '+(a[c.id]==o.lbl?'sel':'')+'" onclick="sl(\\''+o.lbl+'\\')"><b>'+o.lbl+')</b> '+o.txt+'</div>').join('');document.getElementById('qb').innerHTML=h}function sl(l){a[q[i].id]=l;rn()}function nx(){if(i<q.length-1){i++;rn()}else{if(confirm('Submit?'))fn()}}function fn(){clearInterval(t);document.getElementById('q').classList.add('h');document.getElementById('re').classList.remove('h');let c=0,w=0,k=0,h='';q.forEach(x=>{let u=a[x.id],cl='gray',ic='⚪';let ct=x.opts.find(o=>o.lbl===x.ans)?.txt||'';let ut=u?(x.opts.find(o=>o.lbl===u)?.txt||''):'Skip';if(u){if(u==x.ans){c++;cl='green';ic='✅'}else{w++;cl='red';ic='❌'}}else k++;h+='<div style="border-left:4px solid '+cl+';padding:10px;background:#f9f9f9;margin-bottom:10px"><b>Q: '+x.txt+'</b><br><span style="color:'+cl+'">You: '+(u||'-')+' '+ut+' '+ic+'</span><br><span style="color:green">Ans: ('+x.ans+') '+ct+'</span></div>'});let scr=c-(w*(d.settings.neg?0.25:0));document.getElementById('rh').innerHTML='<div style="text-align:left;background:#f1f5f9;padding:15px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:15px"><b>Student Name - </b>'+nm+'<br><b>Roll no - </b>'+rl+'<br><b>Marks - </b>'+scr+'</div>';document.getElementById('dt').innerHTML=h;new Chart(document.getElementById('ch'),{type:'doughnut',data:{datasets:[{data:[c,w,k],backgroundColor:['green','red','#eee']}]}});if(c/q.length>0.3)confetti()}async function sh(){const txt='Test: '+d.meta.title+'\\nName: '+nm+'\\nScore: '+document.getElementById('sc').innerText+'\\nAttempted on VidyarthiPrep.com';if(navigator.share){try{await navigator.share({title:'Quiz Result',text:txt})}catch(e){window.location.href='https://wa.me/?text='+encodeURIComponent(txt)}}else{window.location.href='https://wa.me/?text='+encodeURIComponent(txt)}}function pd(){const b=document.querySelectorAll('#re button');b.forEach(x=>x.style.display='none');html2pdf(document.getElementById('re'),{margin:0.5,filename:nm+'_Result.pdf'});setTimeout(()=>b.forEach(x=>x.style.display='block'),2000)}<\/script></body></html>`;
+    }
+</script>
+</body>
+</html>
